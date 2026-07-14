@@ -40,7 +40,7 @@ export const verbsData = [
     { infinitive: "stehen", prateritum: "stand", partizip2: "gestanden", auxiliary: "haben", translation: "стояти" },
     { infinitive: "steigen", prateritum: "stieg", partizip2: "gestiegen", auxiliary: "sein", translation: "підніматися" },
     { infinitive: "sterben", prateritum: "starb", partizip2: "gestorben", auxiliary: "sein", translation: "померти" },
-    { infinitive: "tragen", prateritum: "trug", partizip2: "getragen", auxiliary: "haben", translation: "носить" },
+    { infinitive: "tragen", prateritum: "trug", partizip2: "getragen", auxiliary: "haben", translation: "носити" },
     { infinitive: "treffen", prateritum: "traf", partizip2: "getroffen", auxiliary: "haben", translation: "зустрічати" },
     { infinitive: "treten", prateritum: "trat", partizip2: "getreten", auxiliary: "haben", translation: "ступати" },
     { infinitive: "trinken", prateritum: "trank", partizip2: "getrunken", auxiliary: "haben", translation: "пити" },
