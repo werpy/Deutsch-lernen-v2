@@ -1,5 +1,4 @@
 export const verbsData = [
-    // --- Твої початкові дієслова ---
     { infinitive: "beginnen", prateritum: "begann", partizip2: "begonnen", auxiliary: "haben", translation: "починати" },
     { infinitive: "bieten", prateritum: "bot", partizip2: "geboten", auxiliary: "haben", translation: "пропонувати" },
     { infinitive: "bitten", prateritum: "bat", partizip2: "gebeten", auxiliary: "haben", translation: "просити" },
@@ -12,7 +11,7 @@ export const verbsData = [
     { infinitive: "fallen", prateritum: "fiel", partizip2: "gefallen", auxiliary: "sein", translation: "падати" },
     { infinitive: "fangen", prateritum: "fing", partizip2: "gefangen", auxiliary: "haben", translation: "ловити" },
     { infinitive: "finden", prateritum: "fand", partizip2: "gefunden", auxiliary: "haben", translation: "знаходити" },
-    { infinitive: "fliegen", prateritum: "flog", partizip2: "geflegen", auxiliary: "sein", translation: "літати" },
+    { infinitive: "fliegen", prateritum: "flog", partizip2: "geflogen", auxiliary: "sein", translation: "літати" },
     { infinitive: "geben", prateritum: "gab", partizip2: "gegeben", auxiliary: "haben", translation: "давати" },
     { infinitive: "gehen", prateritum: "ging", partizip2: "gegangen", auxiliary: "sein", translation: "йти" },
     { infinitive: "haben", prateritum: "hatte", partizip2: "gehabt", auxiliary: "haben", translation: "мати" },
@@ -54,8 +53,6 @@ export const verbsData = [
     { infinitive: "wissen", prateritum: "wusste", partizip2: "gewusst", auxiliary: "haben", translation: "знати" },
     { infinitive: "werden", prateritum: "wurde", partizip2: "geworden", auxiliary: "sein", translation: "ставати" },
     { infinitive: "ziehen", prateritum: "zog", partizip2: "gezogen", auxiliary: "haben", translation: "тягнути" },
-
-    // --- Нові слова додані з фото (Сторінки 256, 257) ---
     { infinitive: "abfahren", prateritum: "fuhr ab", partizip2: "abgefahren", auxiliary: "sein", translation: "від'їжджати" },
     { infinitive: "abfliegen", prateritum: "flog ab", partizip2: "abgeflogen", auxiliary: "sein", translation: "вилітати" },
     { infinitive: "abgeben", prateritum: "gab ab", partizip2: "abgegeben", auxiliary: "haben", translation: "здавати, віддавати" },

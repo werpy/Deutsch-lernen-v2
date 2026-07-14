@@ -1,7 +1,7 @@
 export const imperativData = [
   { infinitive: "beginnen", du: "beginne", ihr: "beginnt", Sie: "beginnen Sie", translation: "починати" },
   { infinitive: "bieten", du: "biete", ihr: "bietet", Sie: "bieten Sie", translation: "пропонувати" },
-  { infinitive: "bitten", du: "bitte", ihr: "bittet", Sie: "bieten Sie", translation: "просити" },
+  { infinitive: "bitten", du: "bitte", ihr: "bittet", Sie: "bitten Sie", translation: "просити" },
   { infinitive: "bleiben", du: "bleib", ihr: "bleibt", Sie: "bleiben Sie", translation: "залишатися" },
   { infinitive: "bringen", du: "bring", ihr: "bringt", Sie: "bringen Sie", translation: "принести" },
   { infinitive: "denken", du: "denk", ihr: "denkt", Sie: "denken Sie", translation: "думати" },
