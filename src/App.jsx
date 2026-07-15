@@ -66,7 +66,8 @@ export default function App() {
   const [quizType, setQuizType] = useState("all-forms");
   const [questionCount, setQuestionCount] = useState(10);
   const [quizState, setQuizState] = useState("setup");
-  const [isCorrectTranslation, setIsCorrectTranslation] = useState(false);
+  const [isCorrectWrittenAnswer, setIsCorrectWrittenAnswer] =
+    useState(false);
 
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -290,9 +291,9 @@ export default function App() {
     if (!verb) return "";
     if (type === "translation") return verb.translation;
     if (type === "prateritum") return verb.prateritum;
-    if (type === "partizip") return verb.partizip2;
+    if (type === "partizip") return `${verb.auxiliary} ${verb.partizip2}`;
     if (type === "auxiliary") return verb.auxiliary;
-    return `${verb.prateritum}, ${verb.partizip2}`;
+    return `${verb.prateritum}, ${verb.auxiliary} ${verb.partizip2}`;
   };
 
   const startQuiz = () => {
@@ -310,6 +311,7 @@ export default function App() {
     setMistakes([]);
     setHasAnswered(false);
     setUserWrittenAnswer("");
+    setIsCorrectWrittenAnswer(false);
     setImpAnswerDu("");
     setImpAnswerIhr("");
     setImpAnswerSie("");
@@ -332,6 +334,18 @@ export default function App() {
     }
   };
 
+  const normalizeGermanAnswer = (value) =>
+    String(value)
+      .trim()
+      .toLocaleLowerCase("de-DE")
+      .replace(/ä/g, "ae")
+      .replace(/ö/g, "oe")
+      .replace(/ü/g, "ue")
+      .replace(/ß/g, "ss")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z]/g, "");
+
   const handleWrittenSubmit = (forcedAnswer = null) => {
     if (hasAnswered) return;
 
@@ -342,34 +356,36 @@ export default function App() {
     setHasAnswered(true);
 
     const currentVerb = questions[currentIndex];
-    const correct = getCorrectAnswerText(currentVerb, quizType)
-      .toLowerCase()
-      .trim();
-    const user = finalAnswer.toLowerCase().trim();
+    const correct = getCorrectAnswerText(currentVerb, quizType).trim();
+    const user = finalAnswer.trim();
 
     let isCorrect = false;
 
-    if (quizType === "all-forms") {
-      const normalizedUser = user.replace(/[^a-zäöüß]/g, "");
-      const normalizedCorrect = correct.replace(/[^a-zäöüß]/g, "");
-      isCorrect = normalizedUser === normalizedCorrect;
+    if (["all-forms", "prateritum", "partizip"].includes(quizType)) {
+      isCorrect =
+        normalizeGermanAnswer(user) === normalizeGermanAnswer(correct);
     } else if (quizType === "translation") {
       // Більш гнучке порівняння для перекладу
+      const normalizedUser = user.toLocaleLowerCase("uk-UA");
+      const normalizedCorrect = correct.toLocaleLowerCase("uk-UA");
       isCorrect =
-        user === correct ||
-        currentVerb.translation.toLowerCase().includes(user) ||
-        user.includes(currentVerb.translation.toLowerCase());
+        normalizedUser === normalizedCorrect ||
+        currentVerb.translation.toLocaleLowerCase("uk-UA").includes(normalizedUser) ||
+        normalizedUser.includes(
+          currentVerb.translation.toLocaleLowerCase("uk-UA"),
+        );
     } else {
-      isCorrect = user === correct;
+      isCorrect =
+        user.toLocaleLowerCase("de-DE") ===
+        correct.toLocaleLowerCase("de-DE");
     }
 
     if (isCorrect) {
       setScore((prev) => prev + 1);
-      if (quizType === "translation") setIsCorrectTranslation(true);
     } else {
       setMistakes((prev) => [...prev, currentVerb]);
-      if (quizType === "translation") setIsCorrectTranslation(false);
     }
+    setIsCorrectWrittenAnswer(isCorrect);
   };
 
   const handleImperativSubmit = () => {
@@ -405,7 +421,7 @@ export default function App() {
       setActiveImpField("du");
       setSelectedOption(null);
       setShowTranslation(false);
-      setIsCorrectTranslation(false);
+      setIsCorrectWrittenAnswer(false);
       if (quizMode === "choice") generateAdvancedBlitz(questions[nextIndex]);
     } else {
       setQuizState("results");
@@ -822,11 +838,11 @@ export default function App() {
                     <div className="space-y-4">
                       <label className="block text-[11px] uppercase font-bold text-slate-400 mb-2 tracking-wide">
                         {quizType === "all-forms" &&
-                          "Введіть форми через кому (напр: begann, begonnen)"}
+                          "Введіть Präteritum, потім haben / sein + Partizip II (напр.: begann, haben begonnen)"}
                         {quizType === "prateritum" &&
                           "Введіть тільки форму Präteritum"}
                         {quizType === "partizip" &&
-                          "Введіть тільки форму Partizip II"}
+                          "Введіть haben / sein + Partizip II (напр.: haben begonnen)"}
                         {quizType === "auxiliary" &&
                           "Виберіть haben або sein нижче"}
                         {quizType === "translation" &&
@@ -878,7 +894,7 @@ export default function App() {
                               }
                               className={`flex-grow p-4 rounded-xl border bg-slate-900/60 text-base font-medium outline-none transition ${
                                 hasAnswered
-                                  ? isCorrectTranslation
+                                  ? isCorrectWrittenAnswer
                                     ? "border-emerald-500 text-emerald-300"
                                     : "border-rose-500 text-rose-300"
                                   : "border-slate-700 focus:border-indigo-500"
@@ -895,11 +911,29 @@ export default function App() {
                             )}
                           </div>
 
-                          {hasAnswered && quizType === "translation" && (
+                          {!hasAnswered && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                Німецькі літери:
+                              </span>
+                              {["ä", "ö", "ü", "ß"].map((char) => (
+                                <button
+                                  key={char}
+                                  type="button"
+                                  onClick={() => insertChar(char)}
+                                  className="w-9 h-9 rounded-lg border border-slate-700 bg-slate-800/70 text-slate-100 font-bold hover:border-indigo-400 hover:bg-indigo-500/20 transition"
+                                >
+                                  {char}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {hasAnswered && (
                             <p
-                              className={`text-sm font-medium ${isCorrectTranslation ? "text-emerald-400" : "text-rose-400"}`}
+                              className={`text-sm font-medium ${isCorrectWrittenAnswer ? "text-emerald-400" : "text-rose-400"}`}
                             >
-                              {isCorrectTranslation
+                              {isCorrectWrittenAnswer
                                 ? "✅ Правильно!"
                                 : "❌ Неправильно"}
                             </p>
@@ -1025,9 +1059,10 @@ export default function App() {
                       <div>
                         Правильнi форми минулого часу:{" "}
                         <span className="underline font-extrabold ml-1 text-indigo-400">
-                          ({questions[currentIndex].auxiliary}){" "}
-                          {questions[currentIndex].prateritum},{" "}
-                          {questions[currentIndex].partizip2}
+                          {getCorrectAnswerText(
+                            questions[currentIndex],
+                            quizType,
+                          )}
                         </span>
                       </div>
                     </div>
