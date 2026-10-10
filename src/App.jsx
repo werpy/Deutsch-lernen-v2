@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { verbsData } from "./data";
-import { imperativData } from "./imperativData";
+import { combinedVerbsData, imperativData } from "./data";
 import {
-  BookOpen,
-  Layers,
-  CheckSquare,
+  getCorrectAnswerText,
+  isWrittenAnswerCorrect,
+} from "./utils/quizAnswers";
+import {
   Search,
   Award,
   AlertCircle,
@@ -12,19 +12,12 @@ import {
   RotateCcw,
   Brain,
   PenTool,
-  Flame,
   Menu,
   X,
+  Flame,
 } from "lucide-react";
-
-const combinedVerbsData = verbsData.map((verb) => {
-  const impMatch = imperativData.find(
-    (imp) => imp.infinitive === verb.infinitive,
-  );
-  return impMatch
-    ? { ...verb, du: impMatch.du, ihr: impMatch.ihr, Sie: impMatch.Sie }
-    : verb;
-});
+import AppHeader from "./components/AppHeader";
+import GermanCharacterButtons from "./components/GermanCharacterButtons";
 
 // ── Flip Card styles injected once ──────────────────────────────────────────
 const flipStyles = `
@@ -66,8 +59,7 @@ export default function App() {
   const [quizType, setQuizType] = useState("all-forms");
   const [questionCount, setQuestionCount] = useState(10);
   const [quizState, setQuizState] = useState("setup");
-  const [isCorrectWrittenAnswer, setIsCorrectWrittenAnswer] =
-    useState(false);
+  const [isCorrectWrittenAnswer, setIsCorrectWrittenAnswer] = useState(false);
 
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -103,6 +95,11 @@ export default function App() {
   const inputDuRef = useRef(null);
   const menuRef = useRef(null);
 
+  const handleNavClick = (id) => {
+    setActiveTab(id);
+    setMenuOpen(false);
+  };
+
   // Скидаємо картку при зміні індексу
   useEffect(() => {
     setIsFlippedPerfect(false);
@@ -134,166 +131,179 @@ export default function App() {
   }, [currentIndex, quizState, quizMode, hasAnswered]);
 
   const generateAdvancedBlitz = (currentVerb) => {
-  const taskTypes = ["classic", "match", "sentence"];
-  const chosenType = taskTypes[Math.floor(Math.random() * taskTypes.length)];
-  setBlitzTaskType(chosenType);
+    const taskTypes = ["classic", "match", "sentence"];
+    const chosenType = taskTypes[Math.floor(Math.random() * taskTypes.length)];
+    setBlitzTaskType(chosenType);
 
-  // ==================== SENTENCE ====================
-  if (chosenType === "sentence") {
-    const perfektAuxiliary =
-      currentVerb.auxiliary === "sein" ? "bin" : "habe";
-    const sentenceTypes = [
-      {
-        label: "Infinitiv",
-        answer: currentVerb.infinitive,
-        templates: [
-          "Ich versuche, heute zu _____.",
-          "Wir planen, zusammen zu _____.",
-          "Es ist wichtig, rechtzeitig zu _____.",
-          "Ich hoffe, bald zu _____.",
-          "Du hast Zeit, jetzt zu _____.",
-          "Wir lernen, besser zu _____.",
-        ],
-        option: (verb) => verb.infinitive,
-      },
-      {
-        label: "Partizip II",
-        answer: currentVerb.partizip2,
-        templates: [
-          `Heute ${perfektAuxiliary} ich schon _____.`,
-          `Am Wochenende ${perfektAuxiliary} ich _____.`,
-          `In letzter Zeit ${perfektAuxiliary} ich oft _____.`,
-          `Gestern ${perfektAuxiliary} ich schließlich _____.`,
-          `Diese Woche ${perfektAuxiliary} ich bereits _____.`,
-        ],
-        option: (verb) => verb.partizip2,
-      },
-      {
-        label: "Hilfsverb im Perfekt",
-        answer: perfektAuxiliary,
-        templates: [
-          `Im Perfekt: Ich _____ heute ${currentVerb.partizip2}.`,
-          `Im Perfekt: Gestern _____ ich ${currentVerb.partizip2}.`,
-          `Im Perfekt: Diese Woche _____ ich ${currentVerb.partizip2}.`,
-        ],
-        options: ["habe", "bin", "hatte", "werde"],
-      },
-    ];
+    // ==================== SENTENCE ====================
+    if (chosenType === "sentence") {
+      const perfektAuxiliary =
+        currentVerb.auxiliary === "sein" ? "bin" : "habe";
+      const sentenceTypes = [
+        {
+          label: "Infinitiv",
+          answer: currentVerb.infinitive,
+          templates: [
+            "Ich versuche, heute zu _____.",
+            "Wir planen, zusammen zu _____.",
+            "Es ist wichtig, rechtzeitig zu _____.",
+            "Ich hoffe, bald zu _____.",
+            "Du hast Zeit, jetzt zu _____.",
+            "Wir lernen, besser zu _____.",
+          ],
+          option: (verb) => verb.infinitive,
+        },
+        {
+          label: "Partizip II",
+          answer: currentVerb.partizip2,
+          templates: [
+            `Heute ${perfektAuxiliary} ich schon _____.`,
+            `Am Wochenende ${perfektAuxiliary} ich _____.`,
+            `In letzter Zeit ${perfektAuxiliary} ich oft _____.`,
+            `Gestern ${perfektAuxiliary} ich schließlich _____.`,
+            `Diese Woche ${perfektAuxiliary} ich bereits _____.`,
+          ],
+          option: (verb) => verb.partizip2,
+        },
+        {
+          label: "Hilfsverb im Perfekt",
+          answer: perfektAuxiliary,
+          templates: [
+            `Im Perfekt: Ich _____ heute ${currentVerb.partizip2}.`,
+            `Im Perfekt: Gestern _____ ich ${currentVerb.partizip2}.`,
+            `Im Perfekt: Diese Woche _____ ich ${currentVerb.partizip2}.`,
+          ],
+          options: ["habe", "bin", "hatte", "werde"],
+        },
+      ];
 
-    if (currentVerb.du) {
-      sentenceTypes.push({
-        label: "Imperativ (du)",
-        answer: currentVerb.du,
-        templates: [
-          "Bitte _____!",
-          "_____ bitte langsam!",
-          "_____ jetzt!",
-          "_____ doch mit uns!",
-        ],
-        option: (verb) => verb.du,
-        eligible: (verb) => verb.du,
-      });
+      if (currentVerb.du) {
+        sentenceTypes.push({
+          label: "Imperativ (du)",
+          answer: currentVerb.du,
+          templates: [
+            "Bitte _____!",
+            "_____ bitte langsam!",
+            "_____ jetzt!",
+            "_____ doch mit uns!",
+          ],
+          option: (verb) => verb.du,
+          eligible: (verb) => verb.du,
+        });
+      }
+
+      const sentenceType =
+        sentenceTypes[Math.floor(Math.random() * sentenceTypes.length)];
+      const sentence =
+        sentenceType.templates[
+          Math.floor(Math.random() * sentenceType.templates.length)
+        ];
+      const correct = sentenceType.answer;
+      const distractors = sentenceType.options
+        ? sentenceType.options.filter((option) => option !== correct)
+        : combinedVerbsData
+            .filter(
+              (verb) =>
+                verb.infinitive !== currentVerb.infinitive &&
+                (!sentenceType.eligible || sentenceType.eligible(verb)),
+            )
+            .map(sentenceType.option)
+            .filter((option) => option && option !== correct)
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 3);
+
+      setBlitzQuestionText(
+        `Доповніть речення потрібною формою (${sentenceType.label}): ${sentence}`,
+      );
+      setCurrentOptions(
+        [...distractors, correct].sort(() => 0.5 - Math.random()),
+      );
+      setBlitzCorrectAnswer(correct);
+      return;
     }
 
-    const sentenceType =
-      sentenceTypes[Math.floor(Math.random() * sentenceTypes.length)];
-    const sentence =
-      sentenceType.templates[
-        Math.floor(Math.random() * sentenceType.templates.length)
-      ];
-    const correct = sentenceType.answer;
-    const distractors = sentenceType.options
-      ? sentenceType.options.filter((option) => option !== correct)
-      : combinedVerbsData
+    // ==================== MATCH ====================
+    if (chosenType === "match") {
+      const usePartizip = Math.random() > 0.5;
+      const targetForm = usePartizip
+        ? currentVerb.partizip2
+        : currentVerb.prateritum;
+
+      setBlitzQuestionText(
+        `Для якої інфінітивної форми це є правильним ${usePartizip ? "Partizip II" : "Präteritum"}: "${targetForm}"?`,
+      );
+
+      const target = currentVerb.infinitive.toLowerCase();
+
+      // Супер-схожі слова
+      const similarVerbs = combinedVerbsData
+        .filter((v) => v.infinitive !== currentVerb.infinitive)
+        .filter((v) => {
+          const b = v.infinitive.toLowerCase();
+          const similarity =
+            target.endsWith(b.slice(-6)) ||
+            b.endsWith(target.slice(-6)) || // дуже схожі закінчення
+            Math.abs(target.length - b.length) <= 3 ||
+            target.slice(0, 5) === b.slice(0, 5) || // схожий початок
+            b.includes(target.slice(2, 6)) ||
+            target.includes(b.slice(2, 6));
+
+          return similarity;
+        })
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3);
+
+      // Якщо мало схожих — додаємо найближчі за написанням
+      if (similarVerbs.length < 3) {
+        const extra = combinedVerbsData
           .filter(
-            (verb) =>
-              verb.infinitive !== currentVerb.infinitive &&
-              (!sentenceType.eligible || sentenceType.eligible(verb)),
+            (v) =>
+              v.infinitive !== currentVerb.infinitive &&
+              !similarVerbs.some((s) => s.infinitive === v.infinitive),
           )
-          .map(sentenceType.option)
-          .filter((option) => option && option !== correct)
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 3);
+          .sort((a, b) => {
+            const da = Math.abs(a.infinitive.length - target.length);
+            const db = Math.abs(b.infinitive.length - target.length);
+            return da - db;
+          })
+          .slice(0, 3 - similarVerbs.length);
+        similarVerbs.push(...extra);
+      }
 
+      const options = [
+        ...similarVerbs.map((v) => v.infinitive),
+        currentVerb.infinitive,
+      ].sort(() => 0.5 - Math.random());
+
+      setCurrentOptions(options);
+      setBlitzCorrectAnswer(currentVerb.infinitive);
+      return;
+    }
+
+    // ==================== CLASSIC ====================
     setBlitzQuestionText(
-      `Доповніть речення потрібною формою (${sentenceType.label}): ${sentence}`,
+      "Оберіть правильну комбінацію форм (Präteritum, Partizip II):",
     );
-    setCurrentOptions([...distractors, correct].sort(() => 0.5 - Math.random()));
-    setBlitzCorrectAnswer(correct);
-    return;
-  }
+    const correct = `${currentVerb.prateritum}, ${currentVerb.partizip2}`;
 
-  // ==================== MATCH ====================
-  if (chosenType === "match") {
-    const usePartizip = Math.random() > 0.5;
-    const targetForm = usePartizip ? currentVerb.partizip2 : currentVerb.prateritum;
-
-    setBlitzQuestionText(
-      `Для якої інфінітивної форми це є правильним ${usePartizip ? "Partizip II" : "Präteritum"}: "${targetForm}"?`
-    );
-
-    const target = currentVerb.infinitive.toLowerCase();
-
-    // Супер-схожі слова
-    const similarVerbs = combinedVerbsData
+    let pool = combinedVerbsData
       .filter((v) => v.infinitive !== currentVerb.infinitive)
-      .filter((v) => {
-        const b = v.infinitive.toLowerCase();
-        const similarity = 
-          (target.endsWith(b.slice(-6)) || b.endsWith(target.slice(-6))) || // дуже схожі закінчення
-          (Math.abs(target.length - b.length) <= 3) ||
-          target.slice(0, 5) === b.slice(0, 5) ||                         // схожий початок
-          b.includes(target.slice(2, 6)) || target.includes(b.slice(2, 6));
+      .map((v) => `${v.prateritum}, ${v.partizip2}`)
+      .sort(
+        (a, b) =>
+          Math.abs(a.length - correct.length) -
+          Math.abs(b.length - correct.length),
+      );
 
-        return similarity;
-      })
+    const smartDistractors = pool
+      .slice(0, 12)
       .sort(() => 0.5 - Math.random())
       .slice(0, 3);
 
-    // Якщо мало схожих — додаємо найближчі за написанням
-    if (similarVerbs.length < 3) {
-      const extra = combinedVerbsData
-        .filter((v) => v.infinitive !== currentVerb.infinitive && 
-                       !similarVerbs.some(s => s.infinitive === v.infinitive))
-        .sort((a, b) => {
-          const da = Math.abs(a.infinitive.length - target.length);
-          const db = Math.abs(b.infinitive.length - target.length);
-          return da - db;
-        })
-        .slice(0, 3 - similarVerbs.length);
-      similarVerbs.push(...extra);
-    }
-
-    const options = [...similarVerbs.map(v => v.infinitive), currentVerb.infinitive]
-      .sort(() => 0.5 - Math.random());
-
-    setCurrentOptions(options);
-    setBlitzCorrectAnswer(currentVerb.infinitive);
-    return;
-  }
-
-  // ==================== CLASSIC ====================
-  setBlitzQuestionText("Оберіть правильну комбінацію форм (Präteritum, Partizip II):");
-  const correct = `${currentVerb.prateritum}, ${currentVerb.partizip2}`;
-
-  let pool = combinedVerbsData
-    .filter((v) => v.infinitive !== currentVerb.infinitive)
-    .map((v) => `${v.prateritum}, ${v.partizip2}`)
-    .sort((a, b) => Math.abs(a.length - correct.length) - Math.abs(b.length - correct.length));
-
-  const smartDistractors = pool.slice(0, 12).sort(() => 0.5 - Math.random()).slice(0, 3);
-
-  setCurrentOptions([...smartDistractors, correct].sort(() => 0.5 - Math.random()));
-  setBlitzCorrectAnswer(correct);
-};
-
-  const getCorrectAnswerText = (verb, type) => {
-    if (!verb) return "";
-    if (type === "translation") return verb.translation;
-    if (type === "prateritum") return verb.prateritum;
-    if (type === "partizip") return `${verb.auxiliary} ${verb.partizip2}`;
-    if (type === "auxiliary") return verb.auxiliary;
-    return `${verb.prateritum}, ${verb.auxiliary} ${verb.partizip2}`;
+    setCurrentOptions(
+      [...smartDistractors, correct].sort(() => 0.5 - Math.random()),
+    );
+    setBlitzCorrectAnswer(correct);
   };
 
   const startQuiz = () => {
@@ -334,18 +344,6 @@ export default function App() {
     }
   };
 
-  const normalizeGermanAnswer = (value) =>
-    String(value)
-      .trim()
-      .toLocaleLowerCase("de-DE")
-      .replace(/ä/g, "ae")
-      .replace(/ö/g, "oe")
-      .replace(/ü/g, "ue")
-      .replace(/ß/g, "ss")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z]/g, "");
-
   const handleWrittenSubmit = (forcedAnswer = null) => {
     if (hasAnswered) return;
 
@@ -356,29 +354,13 @@ export default function App() {
     setHasAnswered(true);
 
     const currentVerb = questions[currentIndex];
-    const correct = getCorrectAnswerText(currentVerb, quizType).trim();
-    const user = finalAnswer.trim();
+    const isCorrect = isWrittenAnswerCorrect(
+      finalAnswer,
+      currentVerb,
+      quizType,
+    );
 
-    let isCorrect = false;
-
-    if (["all-forms", "prateritum", "partizip"].includes(quizType)) {
-      isCorrect =
-        normalizeGermanAnswer(user) === normalizeGermanAnswer(correct);
-    } else if (quizType === "translation") {
-      // Більш гнучке порівняння для перекладу
-      const normalizedUser = user.toLocaleLowerCase("uk-UA");
-      const normalizedCorrect = correct.toLocaleLowerCase("uk-UA");
-      isCorrect =
-        normalizedUser === normalizedCorrect ||
-        currentVerb.translation.toLocaleLowerCase("uk-UA").includes(normalizedUser) ||
-        normalizedUser.includes(
-          currentVerb.translation.toLocaleLowerCase("uk-UA"),
-        );
-    } else {
-      isCorrect =
-        user.toLocaleLowerCase("de-DE") ===
-        correct.toLocaleLowerCase("de-DE");
-    }
+    if (!currentVerb) return;
 
     if (isCorrect) {
       setScore((prev) => prev + 1);
@@ -390,18 +372,25 @@ export default function App() {
 
   const handleImperativSubmit = () => {
     if (hasAnswered) return;
-    if (!impAnswerDu.trim() || !impAnswerIhr.trim() || !impAnswerSie.trim())
-      return;
-    setHasAnswered(true);
+
     const currentVerb = questions[currentIndex];
+    if (!currentVerb || !currentVerb.du) return; // ← захист
+
+    if (!impAnswerDu.trim() || !impAnswerIhr.trim() || !impAnswerSie.trim()) {
+      return;
+    }
+
+    setHasAnswered(true);
+
     const checkDu =
       impAnswerDu.toLowerCase().trim() === currentVerb.du.toLowerCase().trim();
     const checkIhr =
       impAnswerIhr.toLowerCase().trim() ===
-      currentVerb.ihr.toLowerCase().trim();
+      currentVerb.ihr?.toLowerCase().trim();
     const checkSie =
       impAnswerSie.toLowerCase().trim() ===
-      currentVerb.Sie.toLowerCase().trim();
+      currentVerb.Sie?.toLowerCase().trim();
+
     if (checkDu && checkIhr && checkSie) {
       setScore((prev) => prev + 1);
     } else {
@@ -464,46 +453,6 @@ export default function App() {
   const currentImperativFlashcard =
     imperativFlashcards?.[imperativFlashcardIndex];
 
-  const navItems = [
-    {
-      id: "quiz",
-      label: "Тест",
-      icon: <CheckSquare size={14} />,
-      color: "indigo",
-    },
-    {
-      id: "flashcards",
-      label: "Картки: Perfect",
-      icon: <Layers size={14} />,
-      color: "indigo",
-    },
-    {
-      id: "imperativ-flashcards",
-      label: "Картки: Imperativ",
-      icon: <Flame size={14} />,
-      color: "amber",
-    },
-    {
-      id: "list-perfect",
-      label: "Словник: Perfect",
-      icon: <BookOpen size={14} />,
-      color: "indigo",
-    },
-    {
-      id: "list-imperativ",
-      label: "Словник: Imperativ",
-      icon: <Flame size={14} />,
-      color: "amber",
-    },
-  ];
-
-  const currentNavItem = navItems.find((n) => n.id === activeTab);
-
-  const handleNavClick = (id) => {
-    setActiveTab(id);
-    setMenuOpen(false);
-  };
-
   return (
     <div className="flex flex-col min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white antialiased">
       {/* Inject flip card CSS */}
@@ -516,77 +465,14 @@ export default function App() {
       </div>
 
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 py-3 px-4">
-        <div className="max-w-5xl mx-auto flex justify-between items-center gap-4">
-          {/* Logo */}
-          <div>
-            <h1 className="text-lg md:text-xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent tracking-tight">
-              Нiмецький Тренажер
-            </h1>
-            <p className="text-slate-400 text-[11px] mt-0.5 hidden sm:block">
-              {combinedVerbsData?.length || 0} дiєслiв
-            </p>
-          </div>
-
-          {/* Current tab label (center, desktop) */}
-          <span className="hidden md:flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-800/60 px-4 py-1.5 rounded-full border border-slate-700/60">
-            {currentNavItem?.icon}
-            {currentNavItem?.label}
-          </span>
-
-          {/* Burger button */}
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setMenuOpen((o) => !o)}
-              aria-label="Toggle navigation"
-              className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-700 bg-slate-800/70 hover:bg-slate-700 transition-all duration-200 text-slate-300 hover:text-white"
-            >
-              {menuOpen ? <X size={18} /> : <Menu size={18} />}
-            </button>
-
-            {/* Dropdown menu */}
-            {menuOpen && (
-              <div
-                className="absolute right-0 top-14 w-64 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden z-50"
-                style={{ animation: "slideDown 0.18s ease" }}
-              >
-                <style>{`
-                  @keyframes slideDown {
-                    from { opacity: 0; transform: translateY(-8px); }
-                    to   { opacity: 1; transform: translateY(0); }
-                  }
-                `}</style>
-                <div className="p-2 flex flex-col gap-1">
-                  {navItems.map((item) => {
-                    const isActive = activeTab === item.id;
-                    const activeClass =
-                      item.color === "amber"
-                        ? "bg-amber-600 text-white shadow-lg shadow-amber-600/20"
-                        : "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20";
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => handleNavClick(item.id)}
-                        className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-150 ${
-                          isActive
-                            ? activeClass
-                            : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
-                        }`}
-                      >
-                        {item.icon}
-                        {item.label}
-                        {isActive && (
-                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/70" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        activeTab={activeTab}
+        verbCount={combinedVerbsData.length}
+        menuOpen={menuOpen}
+        menuRef={menuRef}
+        onMenuToggle={() => setMenuOpen((isOpen) => !isOpen)}
+        onNavigate={handleNavClick}
+      />
 
       <main className="flex-grow max-w-5xl w-full mx-auto px-4 py-8 relative z-10">
         {/* ── TAB: QUIZ ── */}
@@ -607,7 +493,7 @@ export default function App() {
                         {
                           mode: "choice",
                           icon: <Brain size={16} className="text-indigo-400" />,
-                          title: "Розумний Блiц",
+                          title: "Розумний Бліц",
                           desc: "Пастки, пошук помилок, швидкий вибiр форм.",
                           border: "indigo",
                         },
@@ -742,7 +628,7 @@ export default function App() {
                       }`}
                     >
                       {quizMode === "choice"
-                        ? `БЛIЦ: ${blitzTaskType === "sentence" ? "РЕЧЕННЯ" : blitzTaskType.toUpperCase()}`
+                        ? `БЛІЦ: ${blitzTaskType === "sentence" ? "РЕЧЕННЯ" : blitzTaskType.toUpperCase()}`
                         : quizMode === "imperativ"
                           ? "Утворення Imperativ"
                           : "Суворий Диктант"}
@@ -762,7 +648,7 @@ export default function App() {
                       </h3>
                     )}
 
-                    {(
+                    {
                       <p className="text-slate-400 text-xs font-medium">
                         Переклад:{" "}
                         <span
@@ -781,12 +667,12 @@ export default function App() {
                           {questions[currentIndex].translation}
                         </span>
                       </p>
-                    )}
-                    {(
+                    }
+                    {
                       <p className="text-slate-400 text-xs italic font-medium">
                         (Натисніть щоб прибрати блюр)
                       </p>
-                    )}
+                    }
                   </div>
 
                   {/* БЛІЦ */}
@@ -910,23 +796,8 @@ export default function App() {
                               </button>
                             )}
                           </div>
-
                           {!hasAnswered && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                                Німецькі літери:
-                              </span>
-                              {["ä", "ö", "ü", "ß"].map((char) => (
-                                <button
-                                  key={char}
-                                  type="button"
-                                  onClick={() => insertChar(char)}
-                                  className="w-9 h-9 rounded-lg border border-slate-700 bg-slate-800/70 text-slate-100 font-bold hover:border-indigo-400 hover:bg-indigo-500/20 transition"
-                                >
-                                  {char}
-                                </button>
-                              ))}
-                            </div>
+                            <GermanCharacterButtons onInsert={insertChar} />
                           )}
 
                           {hasAnswered && (
@@ -950,7 +821,7 @@ export default function App() {
                         {[
                           {
                             field: "du",
-                            label: '1. Особa "du"',
+                            label: '1. Особа "du"',
                             color: "emerald",
                             val: impAnswerDu,
                             set: setImpAnswerDu,
@@ -965,7 +836,7 @@ export default function App() {
                           },
                           {
                             field: "Sie",
-                            label: '3. Ввiчлива "Sie"',
+                            label: '3. Ввічлива "Sie"',
                             color: "blue",
                             val: impAnswerSie,
                             set: setImpAnswerSie,
@@ -978,57 +849,59 @@ export default function App() {
                             val,
                             set,
                             ref: fieldRef,
-                          }) => (
-                            <div key={field} className="space-y-1">
-                              <label
-                                className={`block text-[11px] font-bold uppercase tracking-wide text-${color}-400`}
-                              >
-                                {label}
-                              </label>
-                              <input
-                                ref={fieldRef}
-                                type="text"
-                                value={val}
-                                disabled={hasAnswered}
-                                onFocus={() => setActiveImpField(field)}
-                                onChange={(e) => set(e.target.value)}
-                                placeholder={
-                                  field === "du"
-                                    ? "напр: gib / lies"
-                                    : field === "ihr"
-                                      ? "напр: gebt / lest"
-                                      : "напр: geben Sie"
-                                }
-                                className={`w-full p-3 rounded-xl border bg-slate-900/60 font-mono text-sm outline-none transition ${
-                                  hasAnswered
-                                    ? val.toLowerCase().trim() ===
-                                      questions[currentIndex][field]
-                                        .toLowerCase()
-                                        .trim()
-                                      ? "border-emerald-500/60 text-emerald-300"
-                                      : "border-rose-500/60 text-rose-300"
-                                    : `border-slate-800 focus:border-amber-500`
-                                }`}
-                              />
-                              {hasAnswered && (
-                                <span className="text-[11px] text-slate-400 block pt-0.5">
-                                  Правильно:{" "}
-                                  <b className={`text-${color}-400 font-mono`}>
-                                    {questions[currentIndex][field]}
-                                  </b>
-                                </span>
-                              )}
-                            </div>
-                          ),
+                          }) => {
+                            const correctAnswer =
+                              questions[currentIndex]?.[field];
+
+                            return (
+                              <div key={field} className="space-y-1">
+                                <label
+                                  className={`block text-[11px] font-bold uppercase tracking-wide text-${color}-400`}
+                                >
+                                  {label}
+                                </label>
+                                <input
+                                  ref={fieldRef}
+                                  type="text"
+                                  value={val}
+                                  disabled={hasAnswered}
+                                  onFocus={() => setActiveImpField(field)}
+                                  onChange={(e) => set(e.target.value)}
+                                  placeholder={
+                                    field === "du"
+                                      ? "напр: gib / lies"
+                                      : field === "ihr"
+                                        ? "напр: gebt / lest"
+                                        : "напр: geben Sie"
+                                  }
+                                  className={`w-full p-3 rounded-xl border bg-slate-900/60 font-mono text-sm outline-none transition ${
+                                    hasAnswered && correctAnswer
+                                      ? val.toLowerCase().trim() ===
+                                        correctAnswer.toLowerCase().trim()
+                                        ? "border-emerald-500/60 text-emerald-300"
+                                        : "border-rose-500/60 text-rose-300"
+                                      : `border-slate-800 focus:border-amber-500`
+                                  }`}
+                                />
+                                {hasAnswered && correctAnswer && (
+                                  <span className="text-[11px] text-slate-400 block pt-0.5">
+                                    Правильно:{" "}
+                                    <b
+                                      className={`text-${color}-400 font-mono`}
+                                    >
+                                      {correctAnswer}
+                                    </b>
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          },
                         )}
                       </div>
 
                       {!hasAnswered && (
-                        <button
-                          onClick={handleImperativSubmit}
-                          className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow-md"
-                        >
-                          Перевiрити форми Iмперативу
+                        <button onClick={handleImperativSubmit} className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-white text-slate-900 font-bold py-3 px-6 rounded-xl shadow-lg transition transform active:scale-[0.99] text-sm">
+                          Перевірити форми Imperativ
                         </button>
                       )}
                     </div>
